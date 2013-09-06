@@ -8,18 +8,19 @@ function Vector( x, y ) {
 }
 
 Vector.prototype.length = function() {
-    return Math.sqrt( Vector.lengthSquare( this ) );
+    return Math.sqrt( Vector.square( this ) );
 }
 
 extend( Vector, {
     add: function ( p, q ) {
         return new Vector( p.x + q.x, p.y + q.y );
     },
-    lengthSquare: function( p ) {
+    square: function( p ) {
         return p.x * p.x + p.y * p.y;
     },
-    normalize: function( p ) {
-        var factor = 1 / p.length();
+    normalize: function( p, l ) {
+        if(l === undefined) l = 1;
+        var factor = l / p.length();
         return new Vector( p.x * factor, p.y * factor );
     },
     verticalVector: function( p ) {
@@ -39,7 +40,7 @@ extend( Vector, {
     },
     // p 在 q 上的投影
     projection: function( p, q ) {
-        var factor = Vector.dot( p, q ) / Vector.lengthSquare( q );
+        var factor = Vector.dot( p, q ) / Vector.square( q );
         return Vector.multipy( q, factor );
     }
 });

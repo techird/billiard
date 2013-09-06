@@ -1,9 +1,11 @@
 function Billiard() {
 
-    var TABLE_WIDTH = this.TABLE_WIDTH = 2.81
-      , TABLE_HEIGHT = this.TABLE_HEIGHT = 1.53
-      , BALL_RADIUS = this.BALL_RADIUS = 0.05
+    var TABLE_WIDTH = this.TABLE_WIDTH = 2.88
+      , TABLE_HEIGHT = this.TABLE_HEIGHT = 1.60
+      , BALL_RADIUS = this.BALL_RADIUS = 0.042
       , BALL_DIAMETER = this.BALL_DIAMETER = BALL_RADIUS * 2
+      , TABLE_INNER_THICKNESS = this.TABLE_INNER_THICKNESS = BALL_RADIUS
+      , TABLE_OUTER_THICKNESS = this.TABLE_OUTER_THICKNESS = BALL_DIAMETER
       , BALL_COUNT = 16
       , BALL_COLORS = [
             'white',    // 0
@@ -22,8 +24,8 @@ function Billiard() {
             'orange',   // 13
             'darkgreen',// 14
             'brown']    // 15
-      , FRICTION_ACCELERATION = 0.5
-      , ZERO = 0.01
+      , FRICTION_ACCELERATION = 0.2
+      , ZERO = 0.0005
       , BALL_HIT_LOSE = 0.1
       , WALL_HIT_LOSE = 0.46;
     
@@ -82,6 +84,7 @@ function Billiard() {
 
     function detectTwo( a, b ) {
         if( a.v.length() <= ZERO && b.v.length() <= ZERO ) return false;
+        if( !a.visible || !b.visible ) return false;
 
         // a connect from a to b
         var connect = Vector.minus( b.s, a.s );
@@ -123,11 +126,17 @@ function Billiard() {
                 vx = va.x,
                 vy = va.y;
             if( x < BALL_RADIUS && vx < 0 || x > TABLE_WIDTH - BALL_RADIUS && vx > 0 ) {
-                ball.v = new Vector( -vx , vy  );
+                if( y < BALL_DIAMETER || y > TABLE_HEIGHT - BALL_DIAMETER ) {
+                    ball.visible = false;
+                    dynamicBalls.remove(ball);
+                } else {
+                    ball.v = new Vector( -vx, vy);
+                }
             }
             if( y < BALL_RADIUS && vy < 0 || y > TABLE_HEIGHT - BALL_RADIUS && vy > 0 ) {
-                if( x < BALL_DIAMETER || x > TABLE_WIDTH - BALL_DIAMETER ) {
+                if( x < BALL_DIAMETER || x > TABLE_WIDTH - BALL_DIAMETER || Math.abs(x - TABLE_WIDTH / 2) < BALL_RADIUS ) {
                     ball.visible = false;
+                    dynamicBalls.remove(ball);
                 } else {
                     ball.v = new Vector( vx , -vy  );
                 }
@@ -136,16 +145,89 @@ function Billiard() {
         }
     }
 
+    function detectLatestHit( v ) {
+        var latestHit, hit, i;
+        for(i = 1; i < balls.length; i++) {
+            if( !balls[i].visible ) continue;
+            hit = detectHitTo( balls[i], v );
+            if(!latestHit || hit.t < latestHit.t) {
+                latestHit = hit;
+            }
+        }
+        return latestHit;
+    }
+
+    /**
+     * 检测白球到一个静止的球的碰撞轨迹，不碰撞返回false，碰撞返回：
+     * {
+     *     pw: Vector, // 碰撞时白球的位置
+     *     vw: Vector, // 碰撞后白球的速度,
+     *     vt: Vector, // 碰撞后目标球的速度
+     *     t: int      // 碰撞点离白球的距离因子
+     * }
+     */
+    function detectHitTo( targetBall, v ) {
+        /**
+         * 解法：
+         * 白球位置为sw，速度为v；目标球位置为st，速度为0
+         * 球的半径为r
+         * 设碰撞时白球位置为pw
+         * 白球直线运动，则有
+         *     pw = sw + t * v    (1)
+         * 碰撞时两球位置差距为2r：
+         *     | pw - st | = 2 * r      (2)
+         * 把 (1) 代入 (2)，两边平方，有：
+         *     ( sw - st + t * v ) ^ 2 = 4 * r ^ 2   (3)
+         * 记 ds = sw - st，平方展开 （3）
+         *     ds ^ 2 + 2 * ds * t * v + t ^ 2 * v ^ 2 = 4 * r ^ 2
+         * 整理成关于t的一元二次方程：
+         *     (v^2) * t^2 + (2 * ds * v) * t + (ds^2 - 4*r^2) = 0
+         * 方程中，令：
+         *     a = v ^ 2
+         *     b = 2 * ds * v
+         *     c = ds ^ 2 - 4 * r ^ 2
+         * 先判断有解的条件为：
+         *     d = b^2 - 4*a*c > 0
+         * 因为 d > 0，t 要取较小值，所以
+         *     t = (-b + sqrt(d)) / (2*a)
+         */
+        var whiteBall = balls[0],
+            sw = whiteBall.s, 
+            st = targetBall.s,
+            ds = Vector.minus( sw, st ),
+            r = BALL_RADIUS,
+            a = Vector.square(v),
+            b = 2 * Vector.dot( ds, v ),
+            c = Vector.square(ds) - 4 * r * r,
+            d = b * b - 4 * a * c;
+
+        if( d <= 0 ) return false;
+
+        var t = (-b - Math.sqrt(d)) / (2 * a);
+        if( t <= 0 ) return false;
+
+        var pw = Vector.add(sw, Vector.multipy( v, t )),
+            connect = Vector.minus(st, pw),
+            normal = Vector.verticalVector( connect );
+        return {
+            pw: pw,
+            vw: Vector.projection( v, normal ),
+            vt: Vector.projection( v, connect ),
+            t: t,
+            ball: targetBall
+        }
+    }
+
     function step() {
         var ball, i = 0, nStatic = 0;
         while( ball = dynamicBalls[i++] ) {
+            if(!ball.visible) continue;
             ball.a = Vector.multipy( Vector.normalize( ball.v ), -FRICTION_ACCELERATION);
             ball.v = Vector.add( ball.v, Vector.multipy( ball.a, 1 / 1000 ) );
             ball.s = Vector.add( ball.s, Vector.multipy( ball.v, 1 / 1000 ) );
             if( ball.v.length() <= ZERO ) {
                 ball.v = new Vector(0, 0);
                 dynamicBalls.remove(ball);
-                // console.log(dynamicBalls);
             }
         }
         detectCollision();
@@ -180,6 +262,7 @@ function Billiard() {
     this.go = go;
     this.balls = balls;
     this.hit = hit;
+    this.detectLatestHit = detectLatestHit;
     this.getStatus = function() {
         return dynamicBalls.length > 0 ? 'DYNAMIC' : 'STATIC';
     }
