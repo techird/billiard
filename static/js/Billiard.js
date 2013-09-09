@@ -75,11 +75,9 @@ function Billiard() {
                 if( detectTwo( a, b ) ) {
                     dynamicBalls.add(a);
                     dynamicBalls.add(b);
-                    //detected = true;
                 }
             }
         }
-        detected && detectCollision();
     }
 
     function detectTwo( a, b ) {
