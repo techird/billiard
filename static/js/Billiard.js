@@ -1,6 +1,8 @@
 function Billiard() {
     Event.apply(this);
 
+    var me = this;
+
     var TABLE_WIDTH = this.TABLE_WIDTH = 2.88
       , TABLE_HEIGHT = this.TABLE_HEIGHT = 1.60
       , BALL_RADIUS = this.BALL_RADIUS = 0.042
@@ -76,7 +78,7 @@ function Billiard() {
                 if( detectTwo( a, b ) ) {
                     dynamicBalls.add(a);
                     dynamicBalls.add(b);
-                    this.fire('hitball', [a, b]);
+                    me.fire('hitball', [a, b]);
                 }
             }
         }
@@ -129,7 +131,7 @@ function Billiard() {
                 if( y < BALL_DIAMETER || y > TABLE_HEIGHT - BALL_DIAMETER ) {
                     ball.visible = false;
                     dynamicBalls.remove(ball);
-                    this.fire('enterball', [ball]);
+                    me.fire('enterball', [ball]);
                 } else {
                     ball.v = new Vector( -vx, vy);
                 }
@@ -138,7 +140,7 @@ function Billiard() {
                 if( x < BALL_DIAMETER || x > TABLE_WIDTH - BALL_DIAMETER || Math.abs(x - TABLE_WIDTH / 2) < BALL_RADIUS ) {
                     ball.visible = false;
                     dynamicBalls.remove(ball);
-                    this.fire('enterball', [ball]);
+                    me.fire('enterball', [ball]);
                 } else {
                     ball.v = new Vector( vx , -vy  );
                 }

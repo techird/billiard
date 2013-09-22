@@ -6,26 +6,20 @@
 
 function Game() {
     var billiard;
-    var animator;
     var scale;
     var width, height;
-    var bLayer;
-    var aLayer;
-    var tLayer;
+
+    var billiardLayer, interactLayer, tableLayer;
+
+    var billiardSpirit, interactSpirit;
+
     var mouseX, mouseY;
+
     var painter;
 
-    function onframe( e ) {
-        switch( billiard.getStatus() ) {
-            case 'DYNAMIC': 
-                billiard.go( e.deltaTime );
-                renderWorld();
-                break;
-            case 'STATIC':
-                // renderGuide();
-                break;
-        }
-    }
+    var playerCurrent, playerForSmall;
+
+    var roundfirsthit;
 
     function onmousemove( e ) {
         mouseX = e.layerX;
@@ -38,16 +32,43 @@ function Game() {
         var ballVector = Vector.multipy( billiard.balls[0].s, scale );
         if(billiard.getStatus() == 'STATIC') {
             var speed = Vector.minus( mouseVector, ballVector );
-            billiard.hit( Vector.multipy( speed, 3.5 / scale) );
-            aLayer.ctx.clearRect(0, 0, width, height);
+            hit( speed );
+            interactLayer.ctx.clearRect(0, 0, width, height);
         }
-    } 
+    }
+
+    function hit( speed ) {
+        roundfirsthit = undefined;
+        billiard.hit( Vector.multipy( speed, 3.5 / scale) );
+        billiardSpirit.playScene("world");
+    }
 
     function onenterball( e ) {
 
     }
 
     function onhitball( balla, ballb ) {
+        if (!roundfirsthit && balla.index == 0) {
+            if(!playerForSmall) {
+                playerForSmall = ballb.index < 8 ? playerCurrent : playerOther();
+            } else {
+                if ( playerForSmall == playerCurrent && ballb.index > 0 ) {
+                    wrongball();
+                }
+            }
+        }
+    }
+
+    function playerOther() {
+        return playerCurrent == 1 ? 2 : 1;
+    }
+
+    function wrongball() {
+        console.log("Player" + playerCurrent + ": wrongball");
+        breakrule();
+    }
+
+    function breakrule() {
 
     }
 
@@ -60,44 +81,61 @@ function Game() {
             fw = w + ( a + b ) * 2,
             fh = h + ( a + b ) * 2,
 
-        tLayer = new Layer(fw * scale, fh * scale, 0);
-        painter.drawTable( tLayer.ctx, w, h, a, b, d, fw, fh );
+        tableLayer = new Layer(fw * scale, fh * scale, 0);
+        painter.drawTable( tableLayer.ctx, w, h, a, b, d, fw, fh );
     }
 
     function renderWorld() {
-        painter.drawWorld( bLayer.ctx, billiard );
+        painter.drawWorld( billiardLayer.ctx, billiard );
     }
 
     function renderGuide() {
-        painter.drawGuid( aLayer.ctx, billiard, mouseX, mouseY );
+        painter.drawGuide( interactLayer.ctx, billiard, mouseX, mouseY );
     }
 
     function start() {
         renderTable();
         renderWorld();
-        animator.start();
+    }
+    function buildBilliardSpirit() {
+        billiardSpirit = new Spirit();
+        billiardSpirit.addScene("world", function( info ){
+            billiard.go( info.lastFrameLength );
+            renderWorld();
+            return billiard.getStatus() == "DYNAMIC";
+        });
+    }
+    function buildInteractSpirit() {
+        interactSpirit = new Spirit();
+        interactSpirit.addScene("enterball", function( info, ball ) {
+            var ctx = interactLayer.ctx;
+            ctx.save();
+            ctx.fontStyle = ""
+
+            ctx.restore();
+        }, 1000);
     }
     function init() {
         scale = 300;
 
         billiard = new Billiard();
         painter = new Painter( scale );
-        animator = new Animator();
 
         billiard.on('enterball', onenterball);
         billiard.on('hitball', onhitball);
 
-        animator.on('frame', onframe)
+        buildBilliardSpirit();
 
         width = billiard.TABLE_WIDTH * scale;
         height = billiard.TABLE_HEIGHT * scale;
 
-        bLayer = new Layer( width, height, 1 );
-        aLayer = new Layer( width, height, 2 );
+        billiardLayer = new Layer( width, height, 1 );
+        interactLayer = new Layer( width, height, 2 );
 
-        aLayer.canvas.addEventListener('mousemove', onmousemove);
-        aLayer.canvas.addEventListener('mousedown', onmousedown);
+        interactLayer.canvas.addEventListener('mousemove', onmousemove);
+        interactLayer.canvas.addEventListener('mousedown', onmousedown);
         
+        playerCurrent = 1;
     }
     init();
     this.start = start;

@@ -162,7 +162,7 @@ function Painter ( scale ) {
         ctx.restore();
     }
 
-    this.drawGuid = function( ctx, billiard, mouseX, mouseY ) {
+    this.drawGuide = function( ctx, billiard, mouseX, mouseY ) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.save();
         ctx.scale( scale, scale );            
@@ -231,7 +231,23 @@ function Painter ( scale ) {
             drawDashed(ctx, sw.x, sw.y, sm.x, sm.y);
             ctx.stroke();
         }
+        ctx.restore();
+        drawPower( ctx, Vector.multipy(whiteBall.s, scale), new Vector(mouseX, mouseY) );
+    }
 
+    function drawPower( ctx, from, to ) {
+        ctx.save();
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "White";
+        var mid = Vector.multipy( Vector.add(from, to), 0.5 ),
+            text = "Power: " + Vector.minus(from, to).length().toFixed(2)
+            rect = ctx.measureText( text ),
+            x = mid.x - rect.width / 2,
+            y = mid.y + 5,
+            w = rect.width,
+            h = 20;
+        ctx.clearRect(x - 5, y - 12, w + 10, h);
+        ctx.fillText(text, x, y);
         ctx.restore();
     }
 
