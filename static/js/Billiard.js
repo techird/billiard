@@ -1,4 +1,5 @@
 function Billiard() {
+    Event.apply(this);
 
     var TABLE_WIDTH = this.TABLE_WIDTH = 2.88
       , TABLE_HEIGHT = this.TABLE_HEIGHT = 1.60
@@ -43,7 +44,7 @@ function Billiard() {
                         [1,-1], 
                        [-1,0,1],
                      [1,-1,1,-1],
-                    [-1,1,1,-1,1]]
+                    [-1,1,1,-1,1]] // large numbers is seperated with small numbers
 
           , row, type, index, back
 
@@ -75,6 +76,7 @@ function Billiard() {
                 if( detectTwo( a, b ) ) {
                     dynamicBalls.add(a);
                     dynamicBalls.add(b);
+                    this.fire('hitball', [a, b]);
                 }
             }
         }
@@ -127,6 +129,7 @@ function Billiard() {
                 if( y < BALL_DIAMETER || y > TABLE_HEIGHT - BALL_DIAMETER ) {
                     ball.visible = false;
                     dynamicBalls.remove(ball);
+                    this.fire('enterball', [ball]);
                 } else {
                     ball.v = new Vector( -vx, vy);
                 }
@@ -135,6 +138,7 @@ function Billiard() {
                 if( x < BALL_DIAMETER || x > TABLE_WIDTH - BALL_DIAMETER || Math.abs(x - TABLE_WIDTH / 2) < BALL_RADIUS ) {
                     ball.visible = false;
                     dynamicBalls.remove(ball);
+                    this.fire('enterball', [ball]);
                 } else {
                     ball.v = new Vector( vx , -vy  );
                 }
